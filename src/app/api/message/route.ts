@@ -7,6 +7,7 @@ import { OpenAIEmbeddings } from "langchain/embeddings/openai";
 import { PineconeStore } from "langchain/vectorstores/pinecone";
 import { NextRequest } from "next/server";
 import {OpenAIStream, StreamingTextResponse} from 'ai'
+import { Message } from "@prisma/client";
 
 export const POST = async (req: NextRequest) => {
     // endpoint for asking a question to the PDF
@@ -57,20 +58,16 @@ export const POST = async (req: NextRequest) => {
 
     const results = await vectorStore.similaritySearch(message, 4)
 
-    const preMessages = await db.message.findMany({
-        where: {
-            fileId
-        },
-        orderBy: {
-            createdAt: "asc"
-        },
-        take: 6
-    })
+    const preMessages: Message[] = await db.message.findMany({
+    where: { fileId },
+    orderBy: { createdAt: "asc" },
+    take: 6,
+    });
 
     const formattedPrevMessages = preMessages.map((msg) => ({
-        role: msg.isUserMessage ? "user" as const : "assistant" as const,
-        content: msg.text
-    }))
+    role: msg.isUserMessage ? "user" as const : "assistant" as const,
+    content: msg.text,
+}));
 
     const response = await openai.chat.completions.create({
         model: "gpt-3.5-turbo",
